@@ -550,3 +550,12 @@ body * { font-family: inherit; }
 
 @media (max-width: 820px) { .ask-workspace { grid-template-columns: 1fr; }.ask-chat-column, .ask-result-column { min-height: auto; }.ask-result-column { min-height: 480px; }.ask-how-it-works { align-items: flex-start; flex-direction: column; gap: 12px; }.ask-how-it-works > div { flex-wrap: wrap; } }
 @media (max-width: 560px) { .ask-heading { align-items: flex-start; flex-direction: column; }.ask-heading h1 { font-size: 25px; }.ask-heading-badge { width: 100%; justify-content: center; }.ask-chat-column, .ask-result-column { padding: 17px; }.ask-input-foot { align-items: flex-start; flex-direction: column; }.ask-input-foot .primary-button { width: 100%; }.ask-message { max-width: 94%; }.ask-how-it-works > div { gap: 8px; }.ask-how-it-works strong { font-size: 10px; } }
+
+.industry-overview { display: flex; align-items: center; gap: 11px; padding: 13px 17px; margin-bottom: 18px; border: 1px solid #e2e7ef; border-radius: 9px; background: white; }
+.industry-overview > div { min-width: 145px; padding-right: 13px; border-right: 1px solid #edf0f5; }.industry-overview > div strong { display: block; color: #111827; font-size: 12px; }.industry-overview > div span { display: block; margin-top: 4px; color: #4b5563; font-size: 10px; }
+.industry-overview > button { min-width: 125px; height: 41px; display: flex; align-items: center; justify-content: space-between; padding: 0 11px; color: #263449; border: 1px solid #e1e6ee; border-radius: 6px; background: #fbfcfe; font-size: 11px; font-weight: 700; }.industry-overview > button:hover, .industry-overview > button.active { color: #5f49c8; border-color: #bdb1ef; background: #f6f4ff; }.industry-overview > button b { min-width: 20px; padding: 3px 5px; color: #6f59d4; border-radius: 9px; background: #e9e5ff; font-size: 9px; }
+.industry-tag { padding: 3px 5px; color: #6c55c9; border-radius: 3px; background: #f0edff; font-size: 8px; font-weight: 700; }
+.comment-toolbar .toolbar-actions select { max-width: 125px; }
+
+@media (max-width: 820px) { .industry-overview { align-items: stretch; flex-wrap: wrap; }.industry-overview > div { width: 100%; padding: 0 0 9px; border-right: 0; border-bottom: 1px solid #edf0f5; }.industry-overview > button { flex: 1; min-width: 0; } }
+@media (max-width: 560px) { .industry-overview > button { font-size: 10px; }.industry-overview > button b { display: none; }.comment-toolbar .toolbar-actions select { max-width: none; } }

@@ -187,6 +187,87 @@ const comments = [
   },
 ]
 
+const industryTemplates = {
+  家具行业: {
+    platform: '小红书',
+    tone: 'orange',
+    names: ['木木', '阿禾', '小满', '北北', '小树', '安安', '山茶', '小鹿'],
+    texts: [
+      '想问一下这套家具怎么收费？最近正在看新家布置。',
+      '有没有适合小户型的方案？坐标杭州，月底准备入住。',
+      '这个沙发有优惠吗？颜色和尺寸可以定制吗？',
+      '求推荐靠谱的全屋定制，预算 8 万左右可以做吗？',
+      '餐桌椅什么时候有活动？想在婚房入住前买好。',
+      '请问你们在上海有门店吗？可以先去线下试听吗？',
+      '这款柜子多少钱？想看看环保等级和具体材质。',
+      '家里 90 平，想做一套简约风，有设计师推荐吗？',
+    ],
+  },
+  少儿编程: {
+    platform: '抖音',
+    tone: 'blue',
+    names: ['小鱼妈妈', '乐乐妈', '果果爸', 'Mia', '小太阳', '林妈妈', '豆豆妈', '阿哲'],
+    texts: [
+      '孩子四年级，想学少儿编程，课程怎么收费？',
+      '有没有适合零基础孩子的试听课？坐标深圳。',
+      '请问周末班还有名额吗？想给孩子报名体验一下。',
+      '线上和线下课程有什么区别，哪种更适合小学生？',
+      '推荐几岁开始学编程？我家孩子今年 8 岁。',
+      '这套课程有优惠吗？两个孩子一起报名怎么算？',
+      '北京有没有校区？想先了解一下具体上课时间。',
+      '孩子不爱写作业，学编程能提升专注力吗？',
+    ],
+  },
+  私教减脂: {
+    platform: '小红书',
+    tone: 'green',
+    names: ['Nana', '小雅', '小鹿', '阿宁', '一一', 'Frank', '小米', '安安'],
+    texts: [
+      '这个减脂训练营怎么收费？有没有一对一私教？',
+      '我现在 130 斤，想在夏天前瘦下来，推荐哪个方案？',
+      '坐标广州，想找线下私教，有体验课或者优惠吗？',
+      '产后恢复可以参加吗？主要想减腰腹和改善体态。',
+      '完全没有运动基础，课程会不会跟不上？',
+      '请问一个月大概能减多少？饮食需要严格控制吗？',
+      '想报名试试看，最近还有新客优惠吗？',
+      '上班族只能晚上训练，有晚间课程吗？',
+    ],
+  },
+}
+
+function createIndustryComments() {
+  return Object.entries(industryTemplates).flatMap(([industry, config], industryIndex) =>
+    Array.from({ length: 40 }, (_, index) => {
+      const text = config.texts[index % config.texts.length]
+      const score = 62 + ((index * 7 + industryIndex * 5) % 36)
+      const intent = score >= 86 ? '高意向' : score >= 74 ? '中意向' : '待确认'
+      return {
+        id: `industry-${industryIndex}-${index}`,
+        industry,
+        name: config.names[index % config.names.length],
+        avatar: config.names[index % config.names.length].slice(0, 1),
+        platform: index % 3 === 0 ? '抖音' : config.platform,
+        tone: config.tone,
+        text: index % 5 === 0 ? `${text} 想了解报名和价格。` : text,
+        time: `${index + 1}小时前`,
+        intent,
+        score,
+        tags: score >= 86 ? ['明确咨询', '近期需求'] : score >= 74 ? ['需求明确'] : ['待确认'],
+        source: `${industry}相关热门作品 · 客户需求讨论`,
+        likes: 18 + ((index * 13) % 190),
+      }
+    }),
+  )
+}
+
+const demoComments = [
+  ...comments.map((comment) => ({
+    ...comment,
+    industry: comment.id <= 2 ? '少儿编程' : comment.id === 3 ? '私教减脂' : comment.id === 4 ? '少儿编程' : comment.id === 5 ? '成人英语' : comment.id === 6 ? '少儿编程' : comment.id === 7 ? '少儿编程' : comment.id === 8 ? '家具行业' : comment.id === 9 ? '职场写作' : '私教减脂',
+  })),
+  ...createIndustryComments(),
+]
+
 const navItems = [
   { id: 'intro', label: '首页', icon: Home },
   { id: 'ask', label: 'AI交代任务', icon: Sparkles },
@@ -302,7 +383,7 @@ function App() {
           )}
           {activePage === 'comments' && (
             <CommentsPage
-              comments={comments}
+              comments={demoComments}
               setSelectedComment={setSelectedComment}
               notify={notify}
             />
@@ -629,19 +710,23 @@ function ProcessStep({ num, text }) { return <div className="process-step"><b>{n
 function CommentsPage({ comments, setSelectedComment, notify }) {
   const [filter, setFilter] = useState('全部')
   const [platform, setPlatform] = useState('全部平台')
+  const [industry, setIndustry] = useState('全部行业')
   const [search, setSearch] = useState('')
-  const filtered = useMemo(() => comments.filter((comment) => (filter === '全部' || comment.intent === filter) && (platform === '全部平台' || comment.platform === platform) && `${comment.text}${comment.name}`.includes(search)), [filter, platform, search])
+  const industryOptions = ['全部行业', ...Object.keys(industryTemplates)]
+  const filtered = useMemo(() => comments.filter((comment) => (filter === '全部' || comment.intent === filter) && (platform === '全部平台' || comment.platform === platform) && (industry === '全部行业' || comment.industry === industry) && `${comment.text}${comment.name}`.includes(search)), [comments, filter, platform, industry, search])
+  const highIntentCount = comments.filter((comment) => comment.intent === '高意向').length
   return (
     <div className="page">
-      <section className="page-heading comments-heading"><div><span className="eyebrow"><MessageCircleMore size={14} /> 线索中心</span><h1>意向评论</h1><p>AI 已帮你从 2,638 条评论中，筛选出 186 条有价值的线索。</p></div><button className="outline-button" onClick={() => notify('已导出当前筛选结果')}><Download size={16} />导出线索</button></section>
-      <section className="comment-summary"><div className="summary-stat"><span className="summary-stat-icon purple"><MessageCircleMore size={18} /></span><div><strong>186</strong><span>今日新增</span></div></div><div className="summary-stat"><span className="summary-stat-icon orange"><Flame size={18} /></span><div><strong>68</strong><span>高意向</span></div></div><div className="summary-stat"><span className="summary-stat-icon green"><Check size={18} /></span><div><strong>42</strong><span>已跟进</span></div></div><div className="summary-stat chart-stat"><div><span>本周线索增长</span><strong>+32.8%</strong></div><MiniChart /></div></section>
-      <section className="panel comments-panel"><div className="comment-toolbar"><div className="filter-tabs">{['全部', '高意向', '中意向', '待确认'].map((item) => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}{item === '高意向' && <em>68</em>}</button>)}</div><div className="toolbar-actions"><div className="inline-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索评论内容" /></div><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option>全部平台</option><option>抖音</option><option>小红书</option></select><button className="filter-button" onClick={() => notify('更多筛选条件已打开')}><ListFilter size={16} />筛选</button></div></div><div className="comment-table"><div className="comment-table-head"><span>评论内容</span><span>意向评分</span><span>来源作品</span><span>发现时间</span><span /></div>{filtered.map((comment) => <CommentRow key={comment.id} comment={comment} open={() => setSelectedComment(comment)} />)}{filtered.length === 0 && <div className="empty-state"><Search size={22} /><strong>没有找到匹配的评论</strong><span>试试更换关键词或筛选条件</span></div>}</div><div className="table-footer"><span>显示 {filtered.length} 条，共 186 条</span><div><button className="pagination active">1</button><button className="pagination">2</button><button className="pagination">3</button><button className="pagination"><ChevronRight size={15} /></button></div></div></section>
+      <section className="page-heading comments-heading"><div><span className="eyebrow"><MessageCircleMore size={14} /> 线索中心</span><h1>意向评论</h1><p>AI 已从公开内容中整理出 {comments.length} 条演示评论，覆盖家具、少儿编程和私教减脂等行业。</p></div><button className="outline-button" onClick={() => notify('已导出当前筛选结果')}><Download size={16} />导出线索</button></section>
+      <section className="comment-summary"><div className="summary-stat"><span className="summary-stat-icon purple"><MessageCircleMore size={18} /></span><div><strong>{comments.length}</strong><span>演示评论</span></div></div><div className="summary-stat"><span className="summary-stat-icon orange"><Flame size={18} /></span><div><strong>{highIntentCount}</strong><span>高意向</span></div></div><div className="summary-stat"><span className="summary-stat-icon green"><Check size={18} /></span><div><strong>42</strong><span>已跟进</span></div></div><div className="summary-stat chart-stat"><div><span>本周线索增长</span><strong>+32.8%</strong></div><MiniChart /></div></section>
+      <section className="industry-overview"><div><strong>行业样本</strong><span>每个行业 40 条演示评论</span></div>{Object.keys(industryTemplates).map((item) => <button key={item} className={industry === item ? 'active' : ''} onClick={() => setIndustry(industry === item ? '全部行业' : item)}><span>{item}</span><b>40</b></button>)}</section>
+      <section className="panel comments-panel"><div className="comment-toolbar"><div className="filter-tabs">{['全部', '高意向', '中意向', '待确认'].map((item) => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}{item === '高意向' && <em>{highIntentCount}</em>}</button>)}</div><div className="toolbar-actions"><div className="inline-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索评论内容" /></div><select value={industry} onChange={(event) => setIndustry(event.target.value)}>{industryOptions.map((item) => <option key={item}>{item}</option>)}</select><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option>全部平台</option><option>抖音</option><option>小红书</option></select><button className="filter-button" onClick={() => notify('更多筛选条件已打开')}><ListFilter size={16} />筛选</button></div></div><div className="comment-table"><div className="comment-table-head"><span>评论内容</span><span>行业 / 意向评分</span><span>来源作品</span><span>发现时间</span><span /></div>{filtered.map((comment) => <CommentRow key={comment.id} comment={comment} open={() => setSelectedComment(comment)} />)}{filtered.length === 0 && <div className="empty-state"><Search size={22} /><strong>没有找到匹配的评论</strong><span>试试更换关键词或筛选条件</span></div>}</div><div className="table-footer"><span>显示 {filtered.length} 条，共 {comments.length} 条</span><div><button className="pagination active">1</button><button className="pagination">2</button><button className="pagination">3</button><button className="pagination"><ChevronRight size={15} /></button></div></div></section>
     </div>
   )
 }
 
 function CommentRow({ comment, open }) {
-  return <button className="comment-row" onClick={open}><div className="comment-main"><Avatar tone={comment.tone} text={comment.avatar} /><div className="comment-copy"><div className="comment-name"><strong>{comment.name}</strong><span className={`source-platform ${comment.platform === '抖音' ? 'douyin-text' : 'redbook-text'}`}>{comment.platform}</span></div><p><HighlightedComment text={comment.text} /></p><div className="tag-list">{comment.tags.map((tag) => <span key={tag}>{tag}</span>)}</div></div></div><div className="score-cell"><strong>{comment.score}</strong><span>意向分</span></div><div className="source-cell"><strong>{comment.source}</strong><span><HeartIcon /> {comment.likes}</span></div><span className="time-cell">{comment.time}</span><ChevronRight size={16} className="row-arrow" /></button>
+  return <button className="comment-row" onClick={open}><div className="comment-main"><Avatar tone={comment.tone} text={comment.avatar} /><div className="comment-copy"><div className="comment-name"><strong>{comment.name}</strong><span className={`source-platform ${comment.platform === '抖音' ? 'douyin-text' : 'redbook-text'}`}>{comment.platform}</span><span className="industry-tag">{comment.industry}</span></div><p><HighlightedComment text={comment.text} /></p><div className="tag-list">{comment.tags.map((tag) => <span key={tag}>{tag}</span>)}</div></div></div><div className="score-cell"><strong>{comment.score}</strong><span>{comment.industry}</span></div><div className="source-cell"><strong>{comment.source}</strong><span><HeartIcon /> {comment.likes}</span></div><span className="time-cell">{comment.time}</span><ChevronRight size={16} className="row-arrow" /></button>
 }
 
 function HeartIcon() { return <span className="heart-symbol">♡</span> }
