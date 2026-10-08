@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   ArrowRight,
+  ArrowUpRight,
   BarChart3,
   Bell,
   Check,
@@ -488,35 +489,35 @@ function IntroPage({ setActivePage, runCollect }) {
   ]
 
   return (
-    <div className="intro-page">
+    <div className="intro-page intro-redesign">
       <section className="intro-hero">
         <div className="intro-hero-copy">
-          <span className="eyebrow"><Sparkles size={14} /> CODEX · AI 客户挖掘工作流</span>
-          <h1>让 Codex 帮你找到<br /><span>正在主动寻找产品的人。</span></h1>
-          <p>从一个搜索词开始，自动发现抖音和小红书里的公开需求，把藏在评论区的咨询、比较和购买意愿，整理成可以跟进的客户线索。</p>
+          <div className="intro-kicker"><span className="intro-kicker-dot" /> CODEX AI GROWTH ENGINE <span>自动获客系统</span></div>
+          <h1>自动获客，<br /><em>让客户主动出现。</em></h1>
+          <p className="intro-lead">用一句话交代任务，AI 自动搜索抖音与小红书公开内容，识别评论里的购买意向，把分散的需求变成可跟进的客户线索。</p>
           <div className="intro-actions">
-            <button className="primary-button" onClick={runCollect}><Play size={17} fill="currentColor" />立即体验 AI 采集</button>
-            <button className="outline-button intro-secondary-button" onClick={() => setActivePage('home')}><LayoutDashboard size={16} />查看工作台</button>
+            <button className="intro-main-cta" onClick={() => setActivePage('ask')}><Sparkles size={18} />开始 AI 获客 <ArrowRight size={17} /></button>
+            <button className="intro-ghost-cta" onClick={() => setActivePage('home')}><LayoutDashboard size={17} />进入工作台</button>
           </div>
-          <div className="intro-trust"><span><Check size={14} />公开内容挖掘</span><span><Check size={14} />AI 意向识别</span><span><Check size={14} />无需手工翻评论</span></div>
+          <div className="intro-proof-row"><span><strong>2,638</strong> 已发现线索</span><i /><span><strong>82.4</strong> 平均意向分</span><i /><span><strong>24h</strong> 持续监控</span></div>
         </div>
         <div className="intro-visual">
-          <div className="intro-orbit orbit-a" />
-          <div className="intro-orbit orbit-b" />
-          <div className="intro-center"><Sparkles size={29} /><span>Codex<br /><small>AI 挖掘引擎</small></span></div>
-          <div className="intro-node node-search"><Search size={16} /><span>搜索词<br /><b>少儿编程</b></span></div>
-          <div className="intro-node node-works"><Database size={16} /><span>相关作品<br /><b>2,638 条</b></span></div>
-          <div className="intro-node node-leads"><Target size={16} /><span>意向线索<br /><b>186 条</b></span></div>
+          <div className="visual-noise" />
+          <div className="intro-visual-title"><span>LIVE SIGNALS</span><b>实时获客信号</b></div>
+          <div className="signal-card signal-main"><div className="signal-card-head"><span><span className="signal-live-dot" />AI 正在挖掘</span><MoreHorizontal size={17} /></div><div className="signal-query"><Search size={17} /><span>帮我找需要买家具的客户</span></div><div className="signal-line"><span /><span /><span /></div><div className="signal-found"><div className="found-icon"><Target size={17} /></div><div><strong>识别到高意向客户</strong><span>“这套家具怎么收费？有优惠吗？”</span></div><b>96</b></div></div>
+          <div className="signal-card signal-platform"><div className="signal-platform-mark">音</div><div><span>抖音 · 相关作品</span><strong>1,248 条评论</strong></div><ArrowUpRight size={17} /></div>
+          <div className="signal-card signal-result"><div className="result-ring"><b>186</b><span>意向线索</span></div><div><span>今日新增</span><strong>+24.2%</strong></div><BarChart3 size={28} /></div>
           <div className="intro-comment-bubble bubble-one">“怎么收费？”</div>
           <div className="intro-comment-bubble bubble-two">“有优惠吗？”</div>
-          <div className="intro-comment-bubble bubble-three">“推荐哪种课程？”</div>
         </div>
       </section>
 
+      <section className="intro-metric-strip"><div><span>从搜索词</span><strong>到成交机会</strong></div><div><b>01</b><span>一句话交代任务</span></div><ArrowRight size={18} /><div><b>02</b><span>AI 搜索公开内容</span></div><ArrowRight size={18} /><div><b>03</b><span>筛选意向评论</span></div><ArrowRight size={18} /><div><b>04</b><span>马上跟进客户</span></div></section>
+
       <section className="intro-section-heading">
-        <span className="eyebrow"><Zap size={14} /> 三步完成客户挖掘</span>
-        <h2>把人工找客户，变成可复用的 AI 流程。</h2>
-        <p>Codex 负责把公开内容中的需求信号整理出来，你只需要把时间用在真正的沟通和成交上。</p>
+        <span className="eyebrow"><Zap size={14} /> 为什么选择 AI 获客</span>
+        <h2>把每天找客户的时间，留给真正重要的事。</h2>
+        <p>自动发现、智能判断、优先跟进，让获客从重复劳动变成持续增长。</p>
       </section>
       <section className="intro-step-grid">
         {steps.map((step) => (
@@ -528,11 +529,7 @@ function IntroPage({ setActivePage, runCollect }) {
           </div>
         ))}
       </section>
-
-      <section className="intro-bottom">
-        <div><strong>从评论里的一个问题，开始一次有效对话。</strong><span>先用演示数据体验完整流程，再接入你的真实搜索词。</span></div>
-        <button className="text-button" onClick={() => setActivePage('comments')}>查看意向评论 <ArrowRight size={15} /></button>
-      </section>
+      <section className="intro-bottom"><div><span className="eyebrow">READY TO GROW</span><strong>现在开始，让 AI 替你寻找下一位客户。</strong></div><button className="intro-bottom-cta" onClick={() => setActivePage('ask')}>创建 AI 获客任务 <ArrowRight size={16} /></button></section>
     </div>
   )
 }
