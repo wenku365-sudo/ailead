@@ -741,12 +741,22 @@ function AddKeywordModal({ close, submit }) {
 
 function CollectProgressModal({ progress, phase, stats, done, close }) {
   const phases = [
-    { title: '正在搜索相关作品', detail: '正在同步抖音、小红书的最新内容' },
-    { title: '正在分析作品评论', detail: 'AI 正在识别评论里的需求和咨询信号' },
-    { title: '正在筛选意向线索', detail: '正在计算意向评分并整理高价值评论' },
+    { title: '正在搜索相关视频', detail: '正在抖音、小红书中寻找匹配搜索词的视频' },
+    { title: '正在打开视频详情', detail: '正在进入视频页面，准备翻阅评论区' },
+    { title: '正在逐条采集评论', detail: 'AI 正在翻阅评论并识别其中的客户意向' },
     { title: '采集完成', detail: '本次采集已完成，可以关闭窗口查看结果' },
   ]
   const currentPhase = phases[phase] || phases[0]
+  const stage = done ? 'complete' : progress < 28 ? 'searching' : progress < 42 ? 'opening' : 'reading'
+  const videoComments = [
+    { name: 'Mia', text: '这套家具怎么收费？最近正在装修。', score: '96' },
+    { name: '小林', text: '有没有适合小户型的优惠方案？', score: '91' },
+    { name: '阿禾', text: '坐标杭州，推荐哪种材质比较环保？', score: '84' },
+    { name: '北北', text: '想下个月入住，现在报名还来得及吗？', score: '78' },
+    { name: '安安', text: '有线下门店吗？可以先去看看吗？', score: '72' },
+    { name: '小满', text: '预算 8 万左右，能做全屋定制吗？', score: '68' },
+  ]
+  const harvestedCommentCount = done ? videoComments.length : Math.max(0, Math.min(videoComments.length, Math.floor(Math.max(progress - 42, 0) / 7)))
 
   return (
     <div className="collect-modal-backdrop" onMouseDown={close}>
@@ -760,22 +770,39 @@ function CollectProgressModal({ progress, phase, stats, done, close }) {
           <button className="modal-close collect-close" onClick={close} title="关闭采集窗口"><X size={19} /></button>
         </div>
 
-        <div className={`collection-stage ${done ? 'complete' : ''}`}>
-          <div className="stage-grid" />
-          <div className="stage-scan-line" />
-          <div className="stage-core">
-            <div className="stage-core-ring ring-one" />
-            <div className="stage-core-ring ring-two" />
-            <div className="stage-core-center">{done ? <Check size={31} /> : <Sparkles size={29} />}</div>
-          </div>
-          <div className="stage-pulse pulse-one" />
-          <div className="stage-pulse pulse-two" />
-          <div className="stage-label label-top"><Database size={14} />作品库</div>
-          <div className="stage-label label-right"><MessageCircleMore size={14} />评论流</div>
-          <div className="stage-label label-bottom"><Target size={14} />意向线索</div>
-          <div className="stage-data data-one">#少儿编程</div>
-          <div className="stage-data data-two">高意向 96</div>
-          <div className="stage-data data-three">上海 · 近期需求</div>
+        <div className={`collection-stage collection-browser-stage ${stage}`}>
+          <div className="browser-stage-topbar"><span className="browser-dots"><i /><i /><i /></span><div className="browser-address"><Search size={11} /> douyin.com/search/家具购买需求</div><span className="browser-live"><span /> LIVE</span></div>
+          {stage === 'searching' ? (
+            <div className="video-search-view">
+              <div className="video-search-head"><Search size={16} /><strong>家具购买需求</strong><span>正在搜索相关视频...</span></div>
+              <div className="video-result-grid">
+                <div className="video-result-card active"><div className="video-thumb thumb-one"><Play size={17} fill="currentColor" /><span>新家家具怎么选？</span></div><div className="video-result-meta"><strong>小户型家具搭配分享</strong><span>12.8万点赞 · 3,248 条评论</span></div></div>
+                <div className="video-result-card"><div className="video-thumb thumb-two"><Play size={17} fill="currentColor" /><span>全屋定制避坑</span></div><div className="video-result-meta"><strong>装修预算这样分配</strong><span>8.6万点赞 · 1,920 条评论</span></div></div>
+                <div className="video-result-card"><div className="video-thumb thumb-three"><Play size={17} fill="currentColor" /><span>沙发怎么挑</span></div><div className="video-result-meta"><strong>家具材质怎么选</strong><span>5.4万点赞 · 876 条评论</span></div></div>
+              </div>
+              <div className="searching-cursor"><span />正在匹配视频内容</div>
+            </div>
+          ) : (
+            <div className="video-reader-view">
+              <div className="video-detail-column">
+                <div className="opened-video"><div className="opened-video-cover"><Play size={24} fill="currentColor" /><span className="video-progress-line" /></div><strong>小户型家具搭配分享｜新家布置不踩坑</strong><span>家具购买需求 · 12.8万点赞</span></div>
+                <div className="video-author"><span className="author-avatar">木</span><div><strong>木作研究所</strong><span>正在打开视频详情</span></div><button>关注</button></div>
+                <div className="video-action-row"><span><HeartIcon /> 12.8w</span><span><MessageCircleMore size={13} /> 3,248</span><span><Download size={13} /> 收藏</span></div>
+              </div>
+              <div className="comment-reader-column">
+                <div className="comment-reader-head"><strong>评论</strong><span>按热度排序 · 正在翻阅</span><span className="reader-pulse" /></div>
+                <div className="comment-stream">
+                  {videoComments.map((comment, index) => {
+                    const collected = done || index < harvestedCommentCount
+                    const active = !done && stage === 'reading' && index === harvestedCommentCount
+                    return <div className={`stage-comment ${collected ? 'collected' : ''} ${active ? 'active' : ''}`} key={`${comment.name}-${index}`}><span className="stage-comment-avatar">{comment.name.slice(0, 1)}</span><div><strong>{comment.name}</strong><p>{comment.text}</p></div><span className="comment-capture-state">{collected ? <Check size={11} /> : active ? '采集中' : '待处理'}</span></div>
+                  })}
+                </div>
+                <div className="comment-stream-footer"><span className="scrolling-bar" />继续向下翻阅评论</div>
+              </div>
+            </div>
+          )}
+          <div className="stage-action-status"><span className="stage-action-icon">{done ? <Check size={13} /> : stage === 'searching' ? <Search size={13} /> : stage === 'opening' ? <Play size={13} fill="currentColor" /> : <MessageCircleMore size={13} />}</span>{done ? '已完成视频与评论采集' : stage === 'searching' ? '正在寻找匹配视频' : stage === 'opening' ? '正在打开视频并加载评论' : `正在采集第 ${Math.min(harvestedCommentCount + 1, videoComments.length)} 条评论`}</div>
         </div>
 
         <div className="collect-progress-meta">
@@ -785,9 +812,9 @@ function CollectProgressModal({ progress, phase, stats, done, close }) {
         <div className="collect-progress-track"><span style={{ width: `${progress}%` }} /></div>
 
         <div className="collect-stat-grid">
-          <div><span>已扫描作品</span><strong>{stats.works.toLocaleString()}</strong><small>条</small></div>
-          <div><span>已分析评论</span><strong>{stats.comments.toLocaleString()}</strong><small>条</small></div>
-          <div><span>识别意向评论</span><strong>{stats.intents.toLocaleString()}</strong><small>条</small></div>
+          <div><span>已找到视频</span><strong>{stats.works.toLocaleString()}</strong><small>条</small></div>
+          <div><span>已翻阅评论</span><strong>{stats.comments.toLocaleString()}</strong><small>条</small></div>
+          <div><span>已采集评论</span><strong>{Math.max(stats.intents, harvestedCommentCount).toLocaleString()}</strong><small>条</small></div>
         </div>
 
         <div className="collect-phase-list">
