@@ -187,7 +187,7 @@ const comments = [
   },
 ]
 
-const industryTemplates = {
+let industryTemplates = {
   家具行业: {
     platform: '小红书',
     tone: 'orange',
@@ -235,9 +235,38 @@ const industryTemplates = {
   },
 }
 
+Object.assign(industryTemplates, {
+  装修: {
+    platform: '抖音',
+    tone: 'purple',
+    names: ['小周', '阿杰', '柚子', '小满', '木木', '阿宁', '小陈', '一一'],
+    texts: ['新房准备装修，整装大概怎么收费？有没有近期优惠？', '坐标成都，想找靠谱装修公司，能不能推荐一下？', '120 平的房子半包预算大概多少，多久可以完工？', '有没有适合小户型的装修方案？想先看看案例。', '下个月交房，现在报名装修设计还来得及吗？', '全屋定制和整装怎么选？材料环保吗？', '可以先上门量房吗？量房和设计需要收费吗？', '想做现代简约风，预算 15 万能落地吗？'],
+  },
+  医美: {
+    platform: '小红书',
+    tone: 'pink',
+    names: ['小乔', '橙子', 'Nana', '阿梨', '小雨', '沐沐', '安安', '可可'],
+    texts: ['想了解一下玻尿酸项目怎么收费？最近有优惠吗？', '第一次做医美，推荐从什么项目开始？', '你们家光子嫩肤多少钱一次？需要提前预约吗？', '坐标上海，想改善法令纹，有没有适合的方案？', '双眼皮恢复期多久？周末可以面诊吗？', '有没有真实案例可以参考？想先了解一下价格。', '皮肤比较敏感，做水光针会不会不适合？', '最近有新客体验价吗？可以安排医生面诊吗？'],
+  },
+  二手房: {
+    platform: '抖音',
+    tone: 'blue',
+    names: ['老王', '小林', '北北', '小赵', '阿远', '乐乐', '小马', '小夏'],
+    texts: ['预算 300 万，想在杭州买两居，有合适的房源推荐吗？', '这个小区现在二手房均价多少？最近适合买入吗？', '首套房，想了解首付和贷款政策，可以帮忙算一下吗？', '房子是满五唯一吗？税费大概需要多少？', '有没有地铁附近的改善房？周末能带看吗？', '准备近期卖房，评估和挂牌怎么收费？', '这套房可以看现场吗？小区物业和学区怎么样？', '想找总价 200 万以内的房子，推荐几个区域吧。'],
+  },
+  二手车: {
+    platform: '抖音',
+    tone: 'orange',
+    names: ['阿峰', '小吴', '大鹏', '阿凯', '小宇', '小陈', '东东', '阿杰'],
+    texts: ['这台车现在卖多少钱？车况和保养记录怎么样？', '预算 10 万以内，推荐一台适合家用的二手车吧。', '有没有近期优惠？可以分期或者置换吗？', '想买一台 SUV，周末可以到店试驾吗？', '支持第三方检测吗？过户手续需要多久？', '这辆车是几任车主，有没有事故记录？', '坐标深圳，想找自动挡代步车，有合适的推荐吗？', '全款和分期价格分别是多少？'],
+  },
+})
+
+const industryCounts = { 家具行业: 40, 少儿编程: 40, 私教减脂: 40, 装修: 55, 医美: 68, 二手房: 82, 二手车: 47 }
+
 function createIndustryComments() {
   return Object.entries(industryTemplates).flatMap(([industry, config], industryIndex) =>
-    Array.from({ length: 40 }, (_, index) => {
+    Array.from({ length: industryCounts[industry] || 40 }, (_, index) => {
       const text = config.texts[index % config.texts.length]
       const score = 62 + ((index * 7 + industryIndex * 5) % 36)
       const intent = score >= 86 ? '高意向' : score >= 74 ? '中意向' : '待确认'
@@ -273,7 +302,7 @@ const navItems = [
   { id: 'ask', label: 'AI交代任务', icon: Sparkles },
   { id: 'home', label: '工作台', icon: LayoutDashboard },
   { id: 'collect', label: '采集数据', icon: Database },
-  { id: 'comments', label: '意向评论', icon: MessageCircleMore, badge: 24 },
+  { id: 'comments', label: '意向客户', icon: MessageCircleMore, badge: 24 },
 ]
 
 function App() {
@@ -310,7 +339,7 @@ function App() {
 
     let progress = 4
     const timer = window.setInterval(() => {
-      progress = Math.min(progress + Math.ceil(Math.random() * 7) + 3, 100)
+      progress = Math.min(progress + Math.ceil(Math.random() * 4) + 2, 100)
       setCollectProgress(progress)
       setCollectPhase(progress >= 76 ? 2 : progress >= 35 ? 1 : 0)
       setCollectStats({
@@ -324,9 +353,9 @@ function App() {
         setRunning(false)
         setCollectDone(true)
         setCollectPhase(3)
-        notify('采集完成，已新增 28 条意向评论')
+        notify('采集完成，已新增 28 条意向客户')
       }
-    }, 420)
+    }, 720)
   }
 
   const addKeyword = (event) => {
@@ -717,9 +746,9 @@ function CommentsPage({ comments, setSelectedComment, notify }) {
   const highIntentCount = comments.filter((comment) => comment.intent === '高意向').length
   return (
     <div className="page">
-      <section className="page-heading comments-heading"><div><span className="eyebrow"><MessageCircleMore size={14} /> 线索中心</span><h1>意向评论</h1><p>AI 已从公开内容中整理出 {comments.length} 条演示评论，覆盖家具、少儿编程和私教减脂等行业。</p></div><button className="outline-button" onClick={() => notify('已导出当前筛选结果')}><Download size={16} />导出线索</button></section>
-      <section className="comment-summary"><div className="summary-stat"><span className="summary-stat-icon purple"><MessageCircleMore size={18} /></span><div><strong>{comments.length}</strong><span>演示评论</span></div></div><div className="summary-stat"><span className="summary-stat-icon orange"><Flame size={18} /></span><div><strong>{highIntentCount}</strong><span>高意向</span></div></div><div className="summary-stat"><span className="summary-stat-icon green"><Check size={18} /></span><div><strong>42</strong><span>已跟进</span></div></div><div className="summary-stat chart-stat"><div><span>本周线索增长</span><strong>+32.8%</strong></div><MiniChart /></div></section>
-      <section className="industry-overview"><div><strong>行业样本</strong><span>每个行业 40 条演示评论</span></div>{Object.keys(industryTemplates).map((item) => <button key={item} className={industry === item ? 'active' : ''} onClick={() => setIndustry(industry === item ? '全部行业' : item)}><span>{item}</span><b>40</b></button>)}</section>
+      <section className="page-heading comments-heading"><div><span className="eyebrow"><MessageCircleMore size={14} /> 线索中心</span><h1>意向客户</h1><p>AI 已从公开内容中整理出 {comments.length} 条演示客户，覆盖家具、少儿编程、私教减脂、装修、医美、二手房和二手车。</p></div><button className="outline-button" onClick={() => notify('已导出当前筛选结果')}><Download size={16} />导出客户</button></section>
+      <section className="comment-summary"><div className="summary-stat"><span className="summary-stat-icon purple"><MessageCircleMore size={18} /></span><div><strong>{comments.length}</strong><span>演示客户</span></div></div><div className="summary-stat"><span className="summary-stat-icon orange"><Flame size={18} /></span><div><strong>{highIntentCount}</strong><span>高意向</span></div></div><div className="summary-stat"><span className="summary-stat-icon green"><Check size={18} /></span><div><strong>42</strong><span>已跟进</span></div></div><div className="summary-stat chart-stat"><div><span>本周线索增长</span><strong>+32.8%</strong></div><MiniChart /></div></section>
+      <section className="industry-overview"><div><strong>行业样本</strong><span>每个行业独立演示客户数据</span></div>{Object.keys(industryTemplates).map((item) => <button key={item} className={industry === item ? 'active' : ''} onClick={() => setIndustry(industry === item ? '全部行业' : item)}><span>{item}</span><b>{industryCounts[item]}</b></button>)}</section>
       <section className="panel comments-panel"><div className="comment-toolbar"><div className="filter-tabs">{['全部', '高意向', '中意向', '待确认'].map((item) => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}{item === '高意向' && <em>{highIntentCount}</em>}</button>)}</div><div className="toolbar-actions"><div className="inline-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索评论内容" /></div><select value={industry} onChange={(event) => setIndustry(event.target.value)}>{industryOptions.map((item) => <option key={item}>{item}</option>)}</select><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option>全部平台</option><option>抖音</option><option>小红书</option></select><button className="filter-button" onClick={() => notify('更多筛选条件已打开')}><ListFilter size={16} />筛选</button></div></div><div className="comment-table"><div className="comment-table-head"><span>评论内容</span><span>行业 / 意向评分</span><span>来源作品</span><span>发现时间</span><span /></div>{filtered.map((comment) => <CommentRow key={comment.id} comment={comment} open={() => setSelectedComment(comment)} />)}{filtered.length === 0 && <div className="empty-state"><Search size={22} /><strong>没有找到匹配的评论</strong><span>试试更换关键词或筛选条件</span></div>}</div><div className="table-footer"><span>显示 {filtered.length} 条，共 {comments.length} 条</span><div><button className="pagination active">1</button><button className="pagination">2</button><button className="pagination">3</button><button className="pagination"><ChevronRight size={15} /></button></div></div></section>
     </div>
   )
