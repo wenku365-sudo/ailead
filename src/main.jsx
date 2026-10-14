@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   ArrowRight,
@@ -21,6 +21,7 @@ import {
   ListFilter,
   MessageCircleMore,
   MoreHorizontal,
+  Pause,
   Play,
   Plus,
   Search,
@@ -296,6 +297,31 @@ const demoComments = [
   })),
   ...createIndustryComments(),
 ]
+
+function createIncomingComment(sequence) {
+  const entries = Object.entries(industryTemplates)
+  const [industry, config] = entries[sequence % entries.length]
+  const text = config.texts[(sequence * 3) % config.texts.length]
+  const score = 76 + ((sequence * 11) % 22)
+  const intent = score >= 86 ? '高意向' : score >= 74 ? '中意向' : '待确认'
+  const name = config.names[(sequence + 2) % config.names.length]
+  return {
+    id: `live-${Date.now()}-${sequence}`,
+    industry,
+    name,
+    avatar: name.slice(0, 1),
+    platform: sequence % 2 === 0 ? config.platform : '抖音',
+    tone: config.tone,
+    text: `${text} 想先了解具体方案和价格。`,
+    time: '刚刚',
+    intent,
+    score,
+    tags: intent === '高意向' ? ['实时识别', '需求明确'] : ['实时识别', '待跟进'],
+    source: `${industry}相关热门作品 · 实时评论流`,
+    likes: 20 + ((sequence * 17) % 180),
+    isLiveNew: true,
+  }
+}
 
 const navItems = [
   { id: 'intro', label: '首页', icon: Home },
@@ -737,25 +763,45 @@ function CollectPage({ keywords, running, runCollect, setShowAddKeyword, notify 
 function ProcessStep({ num, text }) { return <div className="process-step"><b>{num}</b><span>{text}</span></div> }
 
 function CommentsPage({ comments, setSelectedComment, notify }) {
+  const [liveComments, setLiveComments] = useState(comments)
+  const [streaming, setStreaming] = useState(true)
+  const [newCount, setNewCount] = useState(0)
+  const [statsPulse, setStatsPulse] = useState(0)
+  const [lastArrivedAt, setLastArrivedAt] = useState('等待新客户')
+  const sequenceRef = useRef(0)
   const [filter, setFilter] = useState('全部')
   const [platform, setPlatform] = useState('全部平台')
   const [industry, setIndustry] = useState('全部行业')
   const [search, setSearch] = useState('')
   const industryOptions = ['全部行业', ...Object.keys(industryTemplates)]
-  const filtered = useMemo(() => comments.filter((comment) => (filter === '全部' || comment.intent === filter) && (platform === '全部平台' || comment.platform === platform) && (industry === '全部行业' || comment.industry === industry) && `${comment.text}${comment.name}`.includes(search)), [comments, filter, platform, industry, search])
-  const highIntentCount = comments.filter((comment) => comment.intent === '高意向').length
+  useEffect(() => {
+    if (!streaming) return undefined
+    const timer = window.setInterval(() => {
+      const incoming = createIncomingComment(sequenceRef.current)
+      sequenceRef.current += 1
+      setLiveComments((current) => [incoming, ...current])
+      setNewCount((current) => current + 1)
+      setStatsPulse((current) => current + 1)
+      setLastArrivedAt(`${incoming.industry} · ${incoming.name}`)
+    }, 3600)
+    return () => window.clearInterval(timer)
+  }, [streaming])
+
+  const filtered = useMemo(() => liveComments.filter((comment) => (filter === '全部' || comment.intent === filter) && (platform === '全部平台' || comment.platform === platform) && (industry === '全部行业' || comment.industry === industry) && `${comment.text}${comment.name}`.includes(search)), [liveComments, filter, platform, industry, search])
+  const highIntentCount = liveComments.filter((comment) => comment.intent === '高意向').length
   return (
     <div className="page">
-      <section className="page-heading comments-heading"><div><span className="eyebrow"><MessageCircleMore size={14} /> 线索中心</span><h1>意向客户</h1><p>AI 已从公开内容中整理出 {comments.length} 条演示客户，覆盖家具、少儿编程、私教减脂、装修、医美、二手房和二手车。</p></div><button className="outline-button" onClick={() => notify('已导出当前筛选结果')}><Download size={16} />导出客户</button></section>
-      <section className="comment-summary"><div className="summary-stat"><span className="summary-stat-icon purple"><MessageCircleMore size={18} /></span><div><strong>{comments.length}</strong><span>演示客户</span></div></div><div className="summary-stat"><span className="summary-stat-icon orange"><Flame size={18} /></span><div><strong>{highIntentCount}</strong><span>高意向</span></div></div><div className="summary-stat"><span className="summary-stat-icon green"><Check size={18} /></span><div><strong>42</strong><span>已跟进</span></div></div><div className="summary-stat chart-stat"><div><span>本周线索增长</span><strong>+32.8%</strong></div><MiniChart /></div></section>
+      <section className="page-heading comments-heading"><div><span className="eyebrow"><MessageCircleMore size={14} /> 线索中心</span><h1>意向客户</h1><p>AI 正在持续从公开内容中发现新的意向客户，覆盖家具、少儿编程、私教减脂、装修、医美、二手房和二手车。</p></div><div className="comments-heading-actions"><div className={`live-feed-control ${streaming ? 'active' : 'paused'}`}><span className="live-feed-dot" /><strong>{streaming ? '实时采集中' : '已暂停采集'}</strong><b>+{newCount}</b><button onClick={() => setStreaming((current) => !current)} title={streaming ? '暂停实时采集' : '继续实时采集'}>{streaming ? <Pause size={14} /> : <Play size={14} fill="currentColor" />}{streaming ? '暂停' : '继续'}</button></div><button className="outline-button" onClick={() => notify('已导出当前筛选结果')}><Download size={16} />导出客户</button></div></section>
+      <section className="live-intake-strip"><div className="live-intake-copy"><span className="live-intake-icon"><Zap size={16} /></span><div><strong>新客户正在进入</strong><span>{streaming ? '系统每隔几秒自动识别一条新的高意向评论' : '实时采集已暂停，当前数据保持不变'}</span></div></div><div className="live-intake-latest"><span>最近采集</span><strong key={lastArrivedAt}>{lastArrivedAt}</strong></div><div className="live-intake-count"><strong key={`intake-${statsPulse}`}>+{newCount}</strong><span>本次新增</span></div></section>
+      <section className="comment-summary"><div className="summary-stat"><span className="summary-stat-icon purple"><MessageCircleMore size={18} /></span><div><strong key={`total-${statsPulse}`} className="live-number-pop">{liveComments.length}</strong><span>实时客户总数</span></div></div><div className="summary-stat"><span className="summary-stat-icon orange"><Flame size={18} /></span><div><strong key={`high-${statsPulse}`} className="live-number-pop">{highIntentCount}</strong><span>高意向</span></div></div><div className="summary-stat"><span className="summary-stat-icon green"><Check size={18} /></span><div><strong>42</strong><span>已跟进</span></div></div><div className="summary-stat chart-stat"><div><span>本周线索增长</span><strong>+32.8%</strong></div><MiniChart /></div></section>
       <section className="industry-overview"><div><strong>行业样本</strong><span>每个行业独立演示客户数据</span></div>{Object.keys(industryTemplates).map((item) => <button key={item} className={industry === item ? 'active' : ''} onClick={() => setIndustry(industry === item ? '全部行业' : item)}><span>{item}</span><b>{industryCounts[item]}</b></button>)}</section>
-      <section className="panel comments-panel"><div className="comment-toolbar"><div className="filter-tabs">{['全部', '高意向', '中意向', '待确认'].map((item) => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}{item === '高意向' && <em>{highIntentCount}</em>}</button>)}</div><div className="toolbar-actions"><div className="inline-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索评论内容" /></div><select value={industry} onChange={(event) => setIndustry(event.target.value)}>{industryOptions.map((item) => <option key={item}>{item}</option>)}</select><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option>全部平台</option><option>抖音</option><option>小红书</option></select><button className="filter-button" onClick={() => notify('更多筛选条件已打开')}><ListFilter size={16} />筛选</button></div></div><div className="comment-table"><div className="comment-table-head"><span>评论内容</span><span>行业 / 意向评分</span><span>来源作品</span><span>发现时间</span><span /></div>{filtered.map((comment) => <CommentRow key={comment.id} comment={comment} open={() => setSelectedComment(comment)} />)}{filtered.length === 0 && <div className="empty-state"><Search size={22} /><strong>没有找到匹配的评论</strong><span>试试更换关键词或筛选条件</span></div>}</div><div className="table-footer"><span>显示 {filtered.length} 条，共 {comments.length} 条</span><div><button className="pagination active">1</button><button className="pagination">2</button><button className="pagination">3</button><button className="pagination"><ChevronRight size={15} /></button></div></div></section>
+      <section className="panel comments-panel"><div className="comment-toolbar"><div className="filter-tabs">{['全部', '高意向', '中意向', '待确认'].map((item) => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}{item === '高意向' && <em>{highIntentCount}</em>}</button>)}</div><div className="toolbar-actions"><div className="inline-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索评论内容" /></div><select value={industry} onChange={(event) => setIndustry(event.target.value)}>{industryOptions.map((item) => <option key={item}>{item}</option>)}</select><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option>全部平台</option><option>抖音</option><option>小红书</option></select><button className="filter-button" onClick={() => notify('更多筛选条件已打开')}><ListFilter size={16} />筛选</button></div></div><div className="comment-table"><div className="comment-table-head"><span>评论内容</span><span>行业 / 意向评分</span><span>来源作品</span><span>发现时间</span><span /></div>{filtered.map((comment) => <CommentRow key={comment.id} comment={comment} open={() => setSelectedComment(comment)} />)}{filtered.length === 0 && <div className="empty-state"><Search size={22} /><strong>没有找到匹配的评论</strong><span>试试更换关键词或筛选条件</span></div>}</div><div className="table-footer"><span>显示 {filtered.length} 条，共 {liveComments.length} 条</span><div><button className="pagination active">1</button><button className="pagination">2</button><button className="pagination">3</button><button className="pagination"><ChevronRight size={15} /></button></div></div></section>
     </div>
   )
 }
 
 function CommentRow({ comment, open }) {
-  return <button className="comment-row" onClick={open}><div className="comment-main"><Avatar tone={comment.tone} text={comment.avatar} /><div className="comment-copy"><div className="comment-name"><strong>{comment.name}</strong><span className={`source-platform ${comment.platform === '抖音' ? 'douyin-text' : 'redbook-text'}`}>{comment.platform}</span><span className="industry-tag">{comment.industry}</span></div><p><HighlightedComment text={comment.text} /></p><div className="tag-list">{comment.tags.map((tag) => <span key={tag}>{tag}</span>)}</div></div></div><div className="score-cell"><strong>{comment.score}</strong><span>{comment.industry}</span></div><div className="source-cell"><strong>{comment.source}</strong><span><HeartIcon /> {comment.likes}</span></div><span className="time-cell">{comment.time}</span><ChevronRight size={16} className="row-arrow" /></button>
+  return <button className={`comment-row ${comment.isLiveNew ? 'is-live-new' : ''}`} onClick={open}><div className="comment-main"><Avatar tone={comment.tone} text={comment.avatar} /><div className="comment-copy"><div className="comment-name"><strong>{comment.name}</strong><span className={`source-platform ${comment.platform === '抖音' ? 'douyin-text' : 'redbook-text'}`}>{comment.platform}</span><span className="industry-tag">{comment.industry}</span>{comment.isLiveNew && <span className="live-new-badge"><i />刚刚采集</span>}</div><p><HighlightedComment text={comment.text} /></p><div className="tag-list">{comment.tags.map((tag) => <span key={tag}>{tag}</span>)}</div></div></div><div className="score-cell"><strong>{comment.score}</strong><span>{comment.industry}</span></div><div className="source-cell"><strong>{comment.source}</strong><span><HeartIcon /> {comment.likes}</span></div><span className="time-cell">{comment.time}</span><ChevronRight size={16} className="row-arrow" /></button>
 }
 
 function HeartIcon() { return <span className="heart-symbol">♡</span> }
