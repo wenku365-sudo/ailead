@@ -108,6 +108,8 @@ button:disabled { cursor: wait; opacity: .8; }
 .live-feed-control { min-height: 38px; display: flex; align-items: center; gap: 7px; padding: 0 8px 0 10px; border: 1px solid #dfe6ef; border-radius: 7px; background: #fff; }
 .live-feed-control strong { color: #344257; font-size: 10px; }
 .live-feed-control b { min-width: 27px; padding: 3px 5px; color: #d76d49; border-radius: 10px; background: #fff0e8; font-size: 9px; text-align: center; }
+.live-feed-control label { display: inline-flex; align-items: center; gap: 3px; color: #7b8797; font-size: 9px; white-space: nowrap; }
+.live-feed-control label select { height: 25px; padding: 0 3px; color: #4e5d72; outline: none; border: 1px solid #e0e6ef; border-radius: 4px; background: #fff; font-size: 9px; }
 .live-feed-control button { height: 26px; display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; color: #6651cf; border: 1px solid #dcd6fb; border-radius: 5px; background: #faf9ff; font-size: 9px; font-weight: 700; }
 .live-feed-control.paused button { color: #3f9d79; border-color: #d2eee2; background: #f1fbf7; }
 .live-feed-dot { width: 7px; height: 7px; border-radius: 50%; background: #42b38a; box-shadow: 0 0 0 4px #e3f6ed; animation: live-blink 1.1s infinite; }

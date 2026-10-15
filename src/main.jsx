@@ -298,13 +298,29 @@ const demoComments = [
   ...createIndustryComments(),
 ]
 
-function createIncomingComment(sequence) {
+const liveCities = ['上海', '杭州', '深圳', '成都', '广州', '北京', '苏州', '南京', '武汉', '重庆']
+
+function createIncomingComment(sequence, recentKeys = new Set()) {
   const entries = Object.entries(industryTemplates)
-  const [industry, config] = entries[sequence % entries.length]
-  const text = config.texts[(sequence * 3) % config.texts.length]
+  let attempt = 0
+  let candidate
+
+  do {
+    const candidateSequence = sequence + attempt
+    const [industry, config] = entries[candidateSequence % entries.length]
+    const city = liveCities[candidateSequence % liveCities.length]
+    const baseName = config.names[(candidateSequence + 2) % config.names.length]
+    const serial = String(sequence + 1).padStart(2, '0')
+    const name = `${baseName}_${serial}`
+    const text = `${config.texts[(candidateSequence * 3) % config.texts.length]} ${city}，想先了解具体方案和价格。`
+    const key = `${industry}|${name}|${text}`
+    candidate = { industry, config, city, name, text, key }
+    attempt += 1
+  } while (recentKeys.has(candidate.key) && attempt < entries.length * 2)
+
+  const { industry, config, name, text, key } = candidate
   const score = 76 + ((sequence * 11) % 22)
   const intent = score >= 86 ? '高意向' : score >= 74 ? '中意向' : '待确认'
-  const name = config.names[(sequence + 2) % config.names.length]
   return {
     id: `live-${Date.now()}-${sequence}`,
     industry,
@@ -320,6 +336,7 @@ function createIncomingComment(sequence) {
     source: `${industry}相关热门作品 · 实时评论流`,
     likes: 20 + ((sequence * 17) % 180),
     isLiveNew: true,
+    liveKey: key,
   }
 }
 
@@ -765,10 +782,12 @@ function ProcessStep({ num, text }) { return <div className="process-step"><b>{n
 function CommentsPage({ comments, setSelectedComment, notify }) {
   const [liveComments, setLiveComments] = useState(comments)
   const [streaming, setStreaming] = useState(true)
+  const [intervalSeconds, setIntervalSeconds] = useState(4)
   const [newCount, setNewCount] = useState(0)
   const [statsPulse, setStatsPulse] = useState(0)
   const [lastArrivedAt, setLastArrivedAt] = useState('等待新客户')
   const sequenceRef = useRef(0)
+  const recentLiveKeysRef = useRef([])
   const [filter, setFilter] = useState('全部')
   const [platform, setPlatform] = useState('全部平台')
   const [industry, setIndustry] = useState('全部行业')
@@ -777,22 +796,24 @@ function CommentsPage({ comments, setSelectedComment, notify }) {
   useEffect(() => {
     if (!streaming) return undefined
     const timer = window.setInterval(() => {
-      const incoming = createIncomingComment(sequenceRef.current)
+      const recentKeys = new Set(recentLiveKeysRef.current)
+      const incoming = createIncomingComment(sequenceRef.current, recentKeys)
       sequenceRef.current += 1
+      recentLiveKeysRef.current = [...recentLiveKeysRef.current, incoming.liveKey].slice(-20)
       setLiveComments((current) => [incoming, ...current])
       setNewCount((current) => current + 1)
       setStatsPulse((current) => current + 1)
       setLastArrivedAt(`${incoming.industry} · ${incoming.name}`)
-    }, 3600)
+    }, intervalSeconds * 1000)
     return () => window.clearInterval(timer)
-  }, [streaming])
+  }, [streaming, intervalSeconds])
 
   const filtered = useMemo(() => liveComments.filter((comment) => (filter === '全部' || comment.intent === filter) && (platform === '全部平台' || comment.platform === platform) && (industry === '全部行业' || comment.industry === industry) && `${comment.text}${comment.name}`.includes(search)), [liveComments, filter, platform, industry, search])
   const highIntentCount = liveComments.filter((comment) => comment.intent === '高意向').length
   return (
     <div className="page">
-      <section className="page-heading comments-heading"><div><span className="eyebrow"><MessageCircleMore size={14} /> 线索中心</span><h1>意向客户</h1><p>AI 正在持续从公开内容中发现新的意向客户，覆盖家具、少儿编程、私教减脂、装修、医美、二手房和二手车。</p></div><div className="comments-heading-actions"><div className={`live-feed-control ${streaming ? 'active' : 'paused'}`}><span className="live-feed-dot" /><strong>{streaming ? '实时采集中' : '已暂停采集'}</strong><b>+{newCount}</b><button onClick={() => setStreaming((current) => !current)} title={streaming ? '暂停实时采集' : '继续实时采集'}>{streaming ? <Pause size={14} /> : <Play size={14} fill="currentColor" />}{streaming ? '暂停' : '继续'}</button></div><button className="outline-button" onClick={() => notify('已导出当前筛选结果')}><Download size={16} />导出客户</button></div></section>
-      <section className="live-intake-strip"><div className="live-intake-copy"><span className="live-intake-icon"><Zap size={16} /></span><div><strong>新客户正在进入</strong><span>{streaming ? '系统每隔几秒自动识别一条新的高意向评论' : '实时采集已暂停，当前数据保持不变'}</span></div></div><div className="live-intake-latest"><span>最近采集</span><strong key={lastArrivedAt}>{lastArrivedAt}</strong></div><div className="live-intake-count"><strong key={`intake-${statsPulse}`}>+{newCount}</strong><span>本次新增</span></div></section>
+      <section className="page-heading comments-heading"><div><span className="eyebrow"><MessageCircleMore size={14} /> 线索中心</span><h1>意向客户</h1><p>AI 正在持续从公开内容中发现新的意向客户，覆盖家具、少儿编程、私教减脂、装修、医美、二手房和二手车。</p></div><div className="comments-heading-actions"><div className={`live-feed-control ${streaming ? 'active' : 'paused'}`}><span className="live-feed-dot" /><strong>{streaming ? '实时采集中' : '已暂停采集'}</strong><b>+{newCount}</b><label title="选择新增客户的采集间隔"><span>每</span><select value={intervalSeconds} onChange={(event) => setIntervalSeconds(Number(event.target.value))}><option value="3">3秒</option><option value="4">4秒</option><option value="6">6秒</option><option value="8">8秒</option><option value="10">10秒</option></select></label><button onClick={() => setStreaming((current) => !current)} title={streaming ? '暂停实时采集' : '继续实时采集'}>{streaming ? <Pause size={14} /> : <Play size={14} fill="currentColor" />}{streaming ? '暂停' : '继续'}</button></div><button className="outline-button" onClick={() => notify('已导出当前筛选结果')}><Download size={16} />导出客户</button></div></section>
+      <section className="live-intake-strip"><div className="live-intake-copy"><span className="live-intake-icon"><Zap size={16} /></span><div><strong>新客户正在进入</strong><span>{streaming ? `每 ${intervalSeconds} 秒识别 1 条新客户，最近 20 条自动去重` : '实时采集已暂停，当前数据保持不变'}</span></div></div><div className="live-intake-latest"><span>最近采集</span><strong key={lastArrivedAt}>{lastArrivedAt}</strong></div><div className="live-intake-count"><strong key={`intake-${statsPulse}`}>+{newCount}</strong><span>本次新增</span></div></section>
       <section className="comment-summary"><div className="summary-stat"><span className="summary-stat-icon purple"><MessageCircleMore size={18} /></span><div><strong key={`total-${statsPulse}`} className="live-number-pop">{liveComments.length}</strong><span>实时客户总数</span></div></div><div className="summary-stat"><span className="summary-stat-icon orange"><Flame size={18} /></span><div><strong key={`high-${statsPulse}`} className="live-number-pop">{highIntentCount}</strong><span>高意向</span></div></div><div className="summary-stat"><span className="summary-stat-icon green"><Check size={18} /></span><div><strong>42</strong><span>已跟进</span></div></div><div className="summary-stat chart-stat"><div><span>本周线索增长</span><strong>+32.8%</strong></div><MiniChart /></div></section>
       <section className="industry-overview"><div><strong>行业样本</strong><span>每个行业独立演示客户数据</span></div>{Object.keys(industryTemplates).map((item) => <button key={item} className={industry === item ? 'active' : ''} onClick={() => setIndustry(industry === item ? '全部行业' : item)}><span>{item}</span><b>{industryCounts[item]}</b></button>)}</section>
       <section className="panel comments-panel"><div className="comment-toolbar"><div className="filter-tabs">{['全部', '高意向', '中意向', '待确认'].map((item) => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}{item === '高意向' && <em>{highIntentCount}</em>}</button>)}</div><div className="toolbar-actions"><div className="inline-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索评论内容" /></div><select value={industry} onChange={(event) => setIndustry(event.target.value)}>{industryOptions.map((item) => <option key={item}>{item}</option>)}</select><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option>全部平台</option><option>抖音</option><option>小红书</option></select><button className="filter-button" onClick={() => notify('更多筛选条件已打开')}><ListFilter size={16} />筛选</button></div></div><div className="comment-table"><div className="comment-table-head"><span>评论内容</span><span>行业 / 意向评分</span><span>来源作品</span><span>发现时间</span><span /></div>{filtered.map((comment) => <CommentRow key={comment.id} comment={comment} open={() => setSelectedComment(comment)} />)}{filtered.length === 0 && <div className="empty-state"><Search size={22} /><strong>没有找到匹配的评论</strong><span>试试更换关键词或筛选条件</span></div>}</div><div className="table-footer"><span>显示 {filtered.length} 条，共 {liveComments.length} 条</span><div><button className="pagination active">1</button><button className="pagination">2</button><button className="pagination">3</button><button className="pagination"><ChevronRight size={15} /></button></div></div></section>
